@@ -46,7 +46,11 @@ export class ProductsService {
   }
 
   findAll() {
-    return this.prisma.product.findMany();
+    return this.prisma.product.findMany({
+      include: {
+        category: true,
+      },
+    });
   }
 
   findOne(id: number) {
