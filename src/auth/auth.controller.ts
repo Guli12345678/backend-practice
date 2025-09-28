@@ -1,4 +1,14 @@
-import { Body, Controller, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  BadRequestException,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
 import { SignInUserDto } from '../users/dto/sign-user.dto';
@@ -59,5 +69,25 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User signed out successfully' })
   async signOutUser(@Body('userId') userId: number, @Res() res: Response) {
     return this.authService.signout(userId, res);
+  }
+
+  @Post('test-error')
+  @ApiOperation({ summary: 'Test error handling' })
+  @ApiResponse({ status: 200, description: 'Test successful' })
+  @ApiResponse({ status: 400, description: 'Test error response' })
+  async testError(@Body('errorType') errorType?: string) {
+    if (errorType === 'bad-request') {
+      throw new BadRequestException('This is a test bad request error');
+    }
+    if (errorType === 'not-found') {
+      throw new NotFoundException('This is a test not found error');
+    }
+    if (errorType === 'unauthorized') {
+      throw new UnauthorizedException('This is a test unauthorized error');
+    }
+    if (errorType === 'internal') {
+      throw new Error('This is a test internal error');
+    }
+    return { message: 'Error handling test successful', errorType };
   }
 }

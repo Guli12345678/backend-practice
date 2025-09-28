@@ -51,32 +51,37 @@ export class AuthService {
   }
 
   async signUpUser(createUserDto: CreateUserDto, requesterRole: AllowedRoles) {
-    const candidate = await this.prismaService.user
-      .findUnique({ where: { email: createUserDto.email } })
-      .catch(() => null);
+    try {
+      const candidate = await this.prismaService.user
+        .findUnique({ where: { email: createUserDto.email } })
+        .catch(() => null);
 
-    if (candidate) throw new ConflictException('User already exists');
+      if (candidate) throw new ConflictException('User already exists');
 
-    const activationLink = randomUUID();
+      const activationLink = randomUUID();
 
-    const newUser = await this.usersService.create(
-      { ...createUserDto, activation_link: activationLink },
-      requesterRole,
-    );
+      const newUser = await this.usersService.create(
+        { ...createUserDto, activation_link: activationLink },
+        requesterRole,
+      );
 
-    const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
 
-    await this.prismaService.user.update({
-      where: { email: newUser.email },
-      data: { otp, otpExpiresAt: expiresAt },
-    });
+      await this.prismaService.user.update({
+        where: { email: newUser.email },
+        data: { otp, otpExpiresAt: expiresAt },
+      });
 
-    await this.mailService.sendOtp(newUser, otp);
+      await this.mailService.sendOtp(newUser, otp);
 
-    return {
-      message: `Ro'yhatdan o'tdingiz. Akkauntni faollashtirish uchun emailga yuborilgan kodni kiriting.`,
-    };
+      return {
+        message: `Ro'yhatdan o'tdingiz. Akkauntni faollashtirish uchun emailga yuborilgan kodni kiriting.`,
+      };
+    } catch (error) {
+      console.error('Error in signUpUser:', error);
+      throw error;
+    }
   }
 
   async verifyOtp(email: string, submittedOtp: string) {
@@ -107,35 +112,42 @@ export class AuthService {
     signInUserDto: SignInUserDto,
     res: Response,
   ): Promise<ResponseFields> {
-    const { email, password } = signInUserDto;
-    const user = await this.prismaService.user.findUnique({ where: { email } });
+    try {
+      const { email, password } = signInUserDto;
+      const user = await this.prismaService.user.findUnique({
+        where: { email },
+      });
 
-    if (!user) throw new NotFoundException('User not found');
+      if (!user) throw new NotFoundException('User not found');
 
-    const isValid = await bcrypt.compare(password, user.hashed_password);
-    if (!isValid)
-      throw new UnauthorizedException('Email or password is incorrect');
+      const isValid = await bcrypt.compare(password, user.hashed_password);
+      if (!isValid)
+        throw new UnauthorizedException('Email or password is incorrect');
 
-    const { accessToken, refreshToken } = await this.generateTokensuser(user);
-    if (!refreshToken)
-      throw new UnauthorizedException('Refresh token generation failed');
+      const { accessToken, refreshToken } = await this.generateTokensuser(user);
+      if (!refreshToken)
+        throw new UnauthorizedException('Refresh token generation failed');
 
-    const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
-    await this.prismaService.user.update({
-      where: { id: user.id },
-      data: { hashed_refresh_token: hashedRefreshToken },
-    });
+      const hashedRefreshToken = await bcrypt.hash(refreshToken, 10);
+      await this.prismaService.user.update({
+        where: { id: user.id },
+        data: { hashed_refresh_token: hashedRefreshToken },
+      });
 
-    res.cookie('refreshToken', refreshToken, {
-      maxAge: +process.env.COOKIE_TIME!,
-      httpOnly: true,
-    });
+      res.cookie('refreshToken', refreshToken, {
+        maxAge: +process.env.COOKIE_TIME!,
+        httpOnly: true,
+      });
 
-    return {
-      message: 'User signed in 🎉',
-      userId: Number(user.id),
-      accessToken,
-    };
+      return {
+        message: 'User signed in 🎉',
+        userId: Number(user.id),
+        accessToken,
+      };
+    } catch (error) {
+      console.error('Error in signin:', error);
+      throw error;
+    }
   }
 
   async signout(userId: number, res: Response) {
