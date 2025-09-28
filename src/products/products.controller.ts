@@ -7,6 +7,7 @@ import {
   Param,
   Delete,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -49,22 +50,27 @@ export class ProductsController {
     @Body() createProductDto: CreateProductWithImageDto,
     @GetCurrentUser() user: UserPayload,
   ) {
-    let imageUrl = '';
+    try {
+      let imageUrl = '';
 
-    if (createProductDto.image) {
-      const fileName = await this.imageUploadService.saveImage(
-        createProductDto.image,
-      );
-      imageUrl = this.imageUploadService.getImageUrl(fileName);
+      if (createProductDto.image) {
+        const fileName = await this.imageUploadService.saveImage(
+          createProductDto.image,
+        );
+        imageUrl = this.imageUploadService.getImageUrl(fileName);
+      }
+
+      const productData: CreateProductDto = {
+        ...createProductDto,
+        image: imageUrl,
+        userId: user.id,
+      };
+
+      return this.productsService.create(productData, user.id);
+    } catch (error) {
+      console.error('Error creating product:', error);
+      throw error;
     }
-
-    const productData: CreateProductDto = {
-      ...createProductDto,
-      image: imageUrl,
-      userId: user.id,
-    };
-
-    return this.productsService.create(productData, user.id);
   }
 
   @UseGuards(AuthGuard)
@@ -91,14 +97,23 @@ export class ProductsController {
   })
   @ApiResponse({ status: 400, description: 'Invalid image data' })
   async uploadImage(@Body('image') imageData: string) {
-    const fileName = await this.imageUploadService.saveImage(imageData);
-    const imageUrl = this.imageUploadService.getImageUrl(fileName);
+    try {
+      if (!imageData) {
+        throw new BadRequestException('Image data is required');
+      }
 
-    return {
-      message: 'Image uploaded successfully',
-      fileName,
-      imageUrl,
-    };
+      const fileName = await this.imageUploadService.saveImage(imageData);
+      const imageUrl = this.imageUploadService.getImageUrl(fileName);
+
+      return {
+        message: 'Image uploaded successfully',
+        fileName,
+        imageUrl,
+      };
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      throw error;
+    }
   }
 
   @Get()

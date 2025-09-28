@@ -18,31 +18,45 @@ export class UsersService {
   ) {}
 
   async create(createUserDto: CreateUserDto, requesterRole: AllowedRoles) {
-    const {
-      full_name,
-      phone,
-      email,
-      password,
-      gender,
-      birth_date,
-      hashed_refresh_token,
-    } = createUserDto;
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    return this.prisma.user.create({
-      data: {
+    try {
+      const {
         full_name,
         phone,
         email,
-        hashed_password: hashedPassword,
-        hashed_refresh_token,
+        password,
         gender,
-        birth_date: new Date(birth_date),
-        role: 'USER',
-        is_active: false,
-      },
-    });
+        birth_date,
+        hashed_refresh_token,
+      } = createUserDto;
+
+      if (!password || password.length < 6) {
+        throw new BadRequestException(
+          'Password must be at least 6 characters long',
+        );
+      }
+
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      return this.prisma.user.create({
+        data: {
+          full_name,
+          phone,
+          email,
+          hashed_password: hashedPassword,
+          hashed_refresh_token,
+          gender,
+          birth_date: new Date(birth_date),
+          role: 'USER',
+          is_active: false,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating user:', error);
+      if (error.code === 'P2002') {
+        throw new BadRequestException('User with this email already exists');
+      }
+      throw error;
+    }
   }
 
   async createAdmin(createUserDto: CreateUserDto, requesterRole: AllowedRoles) {

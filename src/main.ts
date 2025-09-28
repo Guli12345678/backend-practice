@@ -5,6 +5,7 @@ import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { join } from 'path';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 async function start() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
@@ -14,6 +15,8 @@ async function start() {
   app.useStaticAssets(join(__dirname, '..', 'uploads'), {
     prefix: '/uploads/',
   });
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   app.enableCors({
     origin: 'http://localhost:4005',
