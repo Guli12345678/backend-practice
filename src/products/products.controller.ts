@@ -10,11 +10,13 @@ import {
 } from '@nestjs/common';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { CreateProductWithImageDto } from './dto/create-product-with-image.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { UserPayload } from '../common/types/user-payload';
 import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
 import { ProductOwnerGuard } from '../common/guards/product-owner.guard';
 import { AuthGuard } from '../common/guards/jwt-auth.guard';
+import { ImageUploadService } from '../common/services/image-upload.service';
 import {
   ApiTags,
   ApiOperation,
@@ -27,24 +29,76 @@ import {
 @ApiTags('Products')
 @Controller('products')
 export class ProductsController {
-  constructor(private readonly productsService: ProductsService) {}
+  constructor(
+    private readonly productsService: ProductsService,
+    private readonly imageUploadService: ImageUploadService,
+  ) {}
 
   @UseGuards(AuthGuard)
   @Post()
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Create a new product' })
-  @ApiBody({ type: CreateProductDto })
+  @ApiOperation({ summary: 'Create a new product with image upload' })
+  @ApiBody({ type: CreateProductWithImageDto })
   @ApiResponse({ status: 201, description: 'Product created successfully' })
   @ApiResponse({
     status: 401,
     description: 'Unauthorized. Valid JWT token required.',
   })
   @ApiResponse({ status: 400, description: 'Invalid input data' })
-  create(
-    @Body() createProductDto: CreateProductDto,
+  async create(
+    @Body() createProductDto: CreateProductWithImageDto,
     @GetCurrentUser() user: UserPayload,
   ) {
-    return this.productsService.create(createProductDto, user.id);
+    let imageUrl = '';
+
+    if (createProductDto.image) {
+      const fileName = await this.imageUploadService.saveImage(
+        createProductDto.image,
+      );
+      imageUrl = this.imageUploadService.getImageUrl(fileName);
+    }
+
+    const productData: CreateProductDto = {
+      ...createProductDto,
+      image: imageUrl,
+      userId: user.id,
+    };
+
+    return this.productsService.create(productData, user.id);
+  }
+
+  @UseGuards(AuthGuard)
+  @Post('upload-image')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Upload product image' })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        image: {
+          type: 'string',
+          description: 'Base64 encoded image data',
+          example: 'data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQ...',
+        },
+      },
+      required: ['image'],
+    },
+  })
+  @ApiResponse({ status: 201, description: 'Image uploaded successfully' })
+  @ApiResponse({
+    status: 401,
+    description: 'Unauthorized. Valid JWT token required.',
+  })
+  @ApiResponse({ status: 400, description: 'Invalid image data' })
+  async uploadImage(@Body('image') imageData: string) {
+    const fileName = await this.imageUploadService.saveImage(imageData);
+    const imageUrl = this.imageUploadService.getImageUrl(fileName);
+
+    return {
+      message: 'Image uploaded successfully',
+      fileName,
+      imageUrl,
+    };
   }
 
   @Get()

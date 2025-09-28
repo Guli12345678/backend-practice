@@ -3,11 +3,17 @@ import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
 import * as cookieParser from 'cookie-parser';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
 async function start() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
   app.setGlobalPrefix('api');
   app.use(cookieParser());
+
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads/',
+  });
 
   app.enableCors({
     origin: 'http://localhost:4005',
@@ -16,9 +22,7 @@ async function start() {
 
   const swaggerConfig = new DocumentBuilder()
     .setTitle('E-commerce API')
-    .setDescription(
-      'Mini E-commerce to test with frontend',
-    )
+    .setDescription('Mini E-commerce to test with frontend')
     .setVersion('1.0')
     .addBearerAuth(
       {
