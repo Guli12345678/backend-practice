@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+  OWNER
+}
+
+enum Gender {
+  MALE
+  FEMALE
+}
+
+model User {
+  id                   Int       @id @default(autoincrement())
+  full_name            String
+  phone                String
+  email                String    @unique
+  hashed_password      String
+  hashed_refresh_token String?
+  gender               String
+  birth_date           DateTime
+  is_active            Boolean   @default(false)
+  role                 Role
+  otp                  String?
+  otpExpiresAt         DateTime?
+  products             Product[]
+
+  @@map("users")
+}
+
+model Category {
+  id       Int       @id @default(autoincrement())
+  name     String    @unique
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  price       Float
+  is_active   Boolean  @default(true)
+  image       String
+  categoryId  Int
+  category    Category @relation(fields: [categoryId], references: [id])
+  userId      Int
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@map("products")
+}
