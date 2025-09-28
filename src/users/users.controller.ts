@@ -93,11 +93,10 @@ export class UsersController {
     return this.usersService.create(createUserDto, 'USER');
   }
 
-  @UseGuards(AuthGuard, RolesGuard)
-  @Roles('ADMIN', 'OWNER')
+  @UseGuards(AuthGuard, SelfGuard)
   @Get(':id')
   @ApiBearerAuth('JWT-auth')
-  @ApiOperation({ summary: 'Get user by ID (Admin/Owner only)' })
+  @ApiOperation({ summary: 'Get user by ID ' })
   @ApiParam({ name: 'id', description: 'User ID' })
   @ApiResponse({ status: 200, description: 'User retrieved successfully' })
   @ApiResponse({
