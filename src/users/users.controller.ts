@@ -108,8 +108,8 @@ export class UsersController {
     description: 'Unauthorized. Valid JWT token required.',
   })
   @ApiResponse({ status: 404, description: 'User not found' })
-  findOne(@Param('id') id: string, @GetCurrentUser() user: UserPayload) {
-    return this.usersService.findOne(+id, user.role);
+  findOne(@Param('id') id: string) {
+    return this.usersService.findOne(+id);
   }
 
   @UseGuards(AuthGuard, RolesGuard)

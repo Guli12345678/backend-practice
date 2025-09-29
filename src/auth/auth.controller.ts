@@ -8,6 +8,9 @@ import {
   BadRequestException,
   NotFoundException,
   UnauthorizedException,
+  UseGuards,
+  Get,
+  Param,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from '../users/dto/create-user.dto';
@@ -15,12 +18,29 @@ import { SignInUserDto } from '../users/dto/sign-user.dto';
 import { Request, Response } from 'express';
 import { VerifyOtpDto } from '../users/dto/verify-otp.dto';
 import { AllowedRoles } from '../common/decorators/roles.decorator';
-import { ApiTags, ApiOperation, ApiResponse, ApiBody } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBody,
+  ApiBearerAuth,
+  ApiParam,
+} from '@nestjs/swagger';
+import { UsersService } from '../users/users.service';
+import { AuthGuard } from '../common/guards/jwt-auth.guard';
+import { SelfGuard } from '../common/guards/user-self.guard';
+import { GetCurrentUser } from '../common/decorators/get-current-user.decorator';
+import { UserPayload } from '../common/types/user-payload';
+import { PrismaService } from '../prisma/prisma.service';
+import { GetCurrentUserId } from '../common/decorators/get-current-user-id.decorator';
 
 @ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly usersService: UsersService,
+  ) {}
 
   @Post('user/signup')
   @ApiOperation({ summary: 'User registration' })
@@ -69,6 +89,17 @@ export class AuthController {
   @ApiResponse({ status: 200, description: 'User signed out successfully' })
   async signOutUser(@Body('userId') userId: number, @Res() res: Response) {
     return this.authService.signout(userId, res);
+  }
+
+  @UseGuards(AuthGuard)
+  @Get('me')
+  @ApiBearerAuth('JWT-auth')
+  @ApiOperation({ summary: 'Get user by token' })
+  @ApiParam({ name: 'id', description: 'User token' })
+  @ApiResponse({ status: 200, description: 'User retrieved successfully' })
+  @ApiResponse({ status: 404, description: 'User not found' })
+  findOne(@GetCurrentUserId() userId: number) {
+    return this.usersService.findOne(userId);
   }
 
   @Post('test-error')

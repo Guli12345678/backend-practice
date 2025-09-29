@@ -12,14 +12,13 @@ export class ProductsService {
   constructor(private readonly prisma: PrismaService) {}
   async create(createProductDto: CreateProductDto, userId: number) {
     try {
-      // Check if category exists
       const category = await this.prisma.category.findUnique({
         where: { id: createProductDto.categoryId },
       });
 
       if (!category) {
         throw new BadRequestException(
-          `Category with ID ${createProductDto.categoryId} does not exist. Please create a category first.`,
+          `Category ID ${createProductDto.categoryId} does not exist.`,
         );
       }
 

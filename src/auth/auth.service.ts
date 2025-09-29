@@ -160,6 +160,8 @@ export class AuthService {
     return true;
   }
 
+  
+
   async refreshUserToken(req: Request, res: Response) {
     const refreshToken = req.cookies['refreshToken'];
     if (!refreshToken) throw new UnauthorizedException('No refresh token');
@@ -201,5 +203,9 @@ export class AuthService {
       userId: Number(user.id),
       accessToken: tokens.accessToken,
     });
+  }
+
+  async getMe(token: string) {
+    
   }
 }

@@ -120,18 +120,10 @@ export class UsersService {
     throw new ForbiddenException('You are not allowed to view users');
   }
 
-  async findOne(id: number, requesterRole: AllowedRoles) {
-    if (requesterRole === 'OWNER') {
-      return this.prisma.user.findUnique({ where: { id } });
-    }
+  async findOne(id: number) {
+    const user = await this.prisma.user.findUnique({ where: { id } });
 
-    if (requesterRole === 'ADMIN') {
-      const user = await this.prisma.user.findUnique({ where: { id } });
-      if (user && user.role === 'OWNER') {
-        throw new ForbiddenException('Cannot access owner data');
-      }
-      return user;
-    }
+    return user;
 
     throw new ForbiddenException('Access denied');
   }
